@@ -6,19 +6,17 @@ import aiohttp
 from aiogram import Bot, Dispatcher, types
 import asyncio
 from datetime import datetime
-# from threading import Timer  # импортируем Timer
-# from concurrent.futures import ThreadPoolExecutor # для реализации пула соединений
 import sqlite3
 import pytz # для установки часового пояса
-
 
 
 
 API_TOKEN = 'tgtoken'
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
-db_file = 'database.db'
-date_filename = 'last_post_date.txt'  # Имя файла для хранения даты последнего поста
+db_file = 'database.db' # файл для хранения бд
+date_filename = 'last_post_date.txt'  # файла для хранения даты последнего поста
+
 
 
 ############################################################################################################################################################################## Логика
@@ -107,7 +105,6 @@ async def check_posts(posts):
     elif os.path.getsize(date_filename) == 0: # если файл с датой пустой (даты нет - первый запрос), берем дату последнего поста (первого элемента в словаре) и сохраняем в файл (только при первом запуске)
         await save_last_date_to_file(posts) # сохраняем дату в файл
         print("Первый запуск. Дата последнего поста сохранена.") 
-        # print_posts(posts) # выводим 10 постов, полученных запросом (метод отсюда можно убрать)
 
 
 
@@ -133,8 +130,6 @@ async def create_posts(data):
             continue
     await check_posts(posts)
 
-    # print(f' Конечный результат словаря: {posts}')
-
 
 
 async def get_10_last_posts():
@@ -157,8 +152,9 @@ async def get_10_last_posts():
 
         await create_posts(data)
         await asyncio.sleep(1800) # следующий запрос выполнится через указанное время   
-
+        
 ############################################################################################################################################################################## Логика
+
 
 start_executed = False
 
@@ -227,5 +223,5 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     loop.run_until_complete(dp.skip_updates())  # Пропускаем старые обновления
     loop.create_task(get_10_last_posts())
-    # executor = ThreadPoolExecutor()
     loop.run_until_complete(dp.start_polling())
+    
