@@ -17,8 +17,8 @@ import pytz # для установки часового пояса
 API_TOKEN = 'tgtoken'
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
-
-date_filename = 'last_post_date.txt'  # Имя файла для хранения даты последнего поста
+db_file = 'database.db'
+date_filename = 'last_post_dateTest.txt'  # Имя файла для хранения даты последнего поста
 
 
 ############################################################################################################################################################################## Логика
@@ -47,25 +47,31 @@ async def load_date_from_file():
 
 # метод по выводу сообщений для авторизованных пользователей
 async def print_posts(new_posts): 
-    with sqlite3.connect('database.db') as db:
+    with sqlite3.connect(db_file) as db:
         cursor = db.cursor()
         cursor.execute(f"""select * from users""")
         users = cursor.fetchall()
+        # тут исправил
+        for user in users:
+            if user[1] != 'NULL': # это группа
+                # await bot.send_message(chat_id=user[0], message_thread_id=user[1], text="Тест пост")
+                for values in new_posts.values():
+                    date = await fromUnixToTime(values["date"])
+                    try:
+                        await bot.send_message(chat_id=user[0], message_thread_id=user[1], text=f'<a href="{values["link"]}">{date}</a>\n\n{values["text"]}\n\n', parse_mode='html')
+                    except:
+                        cursor.execute(f"""delete from users where chat_id = {user[0]}""")
+                        print('Чат удален')
 
-    for user in users:
-        if user[1] != 'NULL': # это группа
-            # await bot.send_message(chat_id=user[0], message_thread_id=user[1], text="Тест пост")
-            for values in new_posts.values():
-                date = await fromUnixToTime(values["date"])
-                await bot.send_message(chat_id=user[0], message_thread_id=user[1], text=f'<a href="{values["link"]}">{date}</a>\n\n{values["text"]}\n\n', parse_mode='html')
-
-        elif user[1] == 'NULL': # это пользователь
-            # await bot.send_message(chat_id=user[0], text="Тест пост")
-            for values in new_posts.values():
-                date = await fromUnixToTime(values["date"])
-                await bot.send_message(chat_id=user[0], text=f'<a href="{values["link"]}">{date}</a>\n\n{values["text"]}\n\n', parse_mode='html')
-           
-
+            elif user[1] == 'NULL': # это пользователь
+                # await bot.send_message(chat_id=user[0], text="Тест пост")
+                for values in new_posts.values():
+                    date = await fromUnixToTime(values["date"])
+                    try:
+                        await bot.send_message(chat_id=user[0], text=f'<a href="{values["link"]}">{date}</a>\n\n{values["text"]}\n\n', parse_mode='html')
+                    except:
+                        cursor.execute(f"""delete from users where chat_id = {user[0]}""")
+                        print('Чат удален')
 
 async def check_posts(posts):
     print(f'Работает функция check_posts')
@@ -164,7 +170,7 @@ async def send_new_posts_on_start(message: types.Message):
     if not start_executed:
         start_executed = True
 
-        with sqlite3.connect('database.db') as db:
+        with sqlite3.connect(db_file) as db:
             cursor = db.cursor()
             cursor.execute(f"""select * from users where chat_id = {chat_id}""") # проверяем, есть ли такой польозователь в БД
             user = cursor.fetchall()
@@ -193,7 +199,7 @@ async def stop(message: types.Message):
     if not stop_executed:
         stop_executed = True
 
-        with sqlite3.connect('database.db') as db:
+        with sqlite3.connect(db_file) as db:
             cursor = db.cursor()
             cursor.execute(f"""select * from users where chat_id = {chat_id}""") # проверяем, есть ли такой польозователь в БД
             user = cursor.fetchall()
