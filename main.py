@@ -147,7 +147,14 @@ async def get_10_last_posts():
                                 'filter': 'owner',
                                 'count': 10
                             })
+        
+        # Проверяем наличие ключа 'response' в ответе
+        if 'response' not in response.json():
+            print("Ответ от VK API не содержит ключ 'response'. Повторная попытка через 1 минуту.")
+            await asyncio.sleep(60)  # Ждем 1 минуту перед повторным запросом
+            continue
 
+        # Если ключ 'response' присутствует, обрабатываем ответ
         data = response.json()['response']['items']
 
         await create_posts(data)
