@@ -8,10 +8,10 @@ import asyncio
 from datetime import datetime
 import sqlite3
 import pytz # для установки часового пояса
+import re
 
 
-
-API_TOKEN = 'tgtoken'
+API_TOKEN = '6737968807:AAEgjuH6rJfWrIdAu6N_F8r-2JLyDM9cS_A'
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 db_file = 'database.db' # файл для хранения бд
@@ -30,7 +30,6 @@ async def fromUnixToTime(date):
     return formatted_string
 
 
-
 # метод по сохранению даты последней записи в файл
 async def save_last_date_to_file(posts):
     last_date = max(post['date'] for post in posts.values())   # находим наибольшую дату (самую последнюю) из словаря и сохраняем ее в файл  
@@ -40,7 +39,22 @@ async def save_last_date_to_file(posts):
 async def load_date_from_file():
     with open(date_filename, 'r') as file:
         return int(file.read())
+
+
+# метод по преобразованию ссылок из вк в ссылки telegram
+def process_links_to_telegram(text):
+    # Шаблон для поиска ссылок формата [id|name] или [club|name]
+    pattern = re.compile(r'\[(.*?)\|(.*?)\]')
     
+    def replace_link(match):
+        id_or_club = match.group(1)
+        name = match.group(2)
+        url = f"https://vk.com/{id_or_club}"
+        return f'<a href="{url}">{name}</a>'
+    
+    # Заменяем все вхождения по шаблону
+    processed_text = pattern.sub(replace_link, text)
+    return processed_text
 
 
 # метод по выводу сообщений для авторизованных пользователей
@@ -56,7 +70,9 @@ async def print_posts(new_posts):
                 for values in new_posts.values():
                     date = await fromUnixToTime(values["date"])
                     try:
-                        await bot.send_message(chat_id=user[0], message_thread_id=user[1], text=f'<a href="{values["link"]}">{date}</a>\n\n{values["text"]}\n\n', parse_mode='html')
+                        #метод по преобразованию ссылок
+                        text = process_links_to_telegram(values["text"])
+                        await bot.send_message(chat_id=user[0], message_thread_id=user[1], text=f'<a href="{values["link"]}">{date}</a>\n\n{text}\n\n', parse_mode='html')
                     except:
                         cursor.execute(f"""delete from users where chat_id = {user[0]}""")
                         print('Чат удален')
@@ -70,6 +86,7 @@ async def print_posts(new_posts):
                     except:
                         cursor.execute(f"""delete from users where chat_id = {user[0]}""")
                         print('Чат удален')
+
 
 async def check_posts(posts):
     print(f'Работает функция check_posts')
@@ -107,7 +124,6 @@ async def check_posts(posts):
         print("Первый запуск. Дата последнего поста сохранена.") 
 
 
-
 async def create_posts(data):
     global date
     posts = {}
@@ -116,7 +132,7 @@ async def create_posts(data):
 
         text = data[i]['text']
 
-        if not text.startswith('Уважаемые игроки, стена закрыта до'):
+        if not ' закрыта до ' in text or not '' in text: # если пост не про закрытую стену и текст не пустой
 
             link = f'https://vk.com/wall-51036743_{data[i]["id"]}'
             date = data[i]['date'] 
@@ -131,10 +147,9 @@ async def create_posts(data):
     await check_posts(posts)
 
 
-
 async def get_10_last_posts():
     while True:
-        token = 'vktoken' # токен vk api
+        token = '6e126f356e126f356e126f35c46d04d53866e126e126f350b9b359b4933f4429945ba8b' # токен vk api
         version = 5.199 # версия vk api
         domain = 'superracing' # домен группы
         url = f'https://api.vk.com/method/wall.get'
@@ -193,6 +208,7 @@ async def send_new_posts_on_start(message: types.Message):
 
         start_executed = False
 
+
 stop_executed = False
 @dp.message_handler(commands=['stop'])
 async def stop(message: types.Message):
@@ -219,11 +235,9 @@ async def stop(message: types.Message):
         stop_executed = False  # установка в false для следующего вызова stop()
 
 
-
 @dp.message_handler(commands=['help'])
 async def help(message: types.Message):
     await message.reply("/start – запуск бота, новые посты будут отправляться в этот чат.\n/stop - остановка бота, новые посты больше не будут отправляться в чат, пока вы снова не отправите команду /start.")
-
 
 
 if __name__ == '__main__':
