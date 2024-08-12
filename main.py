@@ -45,6 +45,22 @@ async def load_date_from_file():
         return int(file.read())
 
 
+
+# метод по преобразованию ссылок из вк в ссылки telegram
+def process_links_to_telegram(text):
+    # Шаблон для поиска ссылок формата [id|name] или [club|name]
+    pattern = re.compile(r'\[(.*?)\|(.*?)\]')
+    
+    def replace_link(match):
+        id_or_club = match.group(1)
+        name = match.group(2)
+        url = f"https://vk.com/{id_or_club}"
+        return f'<a href="{url}">{name}</a>'
+    
+    # Заменяем все вхождения по шаблону
+    processed_text = pattern.sub(replace_link, text)
+    return processed_text
+
 # метод по преобразованию ссылок из вк в ссылки telegram
 def process_links_to_telegram(text):
     # Шаблон для поиска ссылок формата [id|name] или [club|name]
@@ -77,6 +93,9 @@ async def print_posts(new_posts):
                         #метод по преобразованию ссылок
                         text = process_links_to_telegram(values["text"])
                         await bot.send_message(chat_id=user[0], message_thread_id=user[1], text=f'<a href="{values["link"]}">{date}</a>\n\n{text}\n\n', parse_mode='html')
+                        #метод по преобразованию ссылок
+                        text = process_links_to_telegram(values["text"])
+                        await bot.send_message(chat_id=user[0], message_thread_id=user[1], text=f'<a href="{values["link"]}">{date}</a>\n\n{text}\n\n', parse_mode='html')
                     except:
                         cursor.execute(f"""delete from users where chat_id = {user[0]}""")
                         print('Чат удален')
@@ -90,6 +109,7 @@ async def print_posts(new_posts):
                     except:
                         cursor.execute(f"""delete from users where chat_id = {user[0]}""")
                         print('Чат удален')
+
 
 
 async def check_posts(posts):
@@ -137,7 +157,7 @@ async def create_posts(data):
         text = data[i]['text']
 
         if not ' закрыта до ' in text or not '' in text: # если пост не про закрытую стену и текст не пустой
-
+            
             link = f'https://vk.com/wall-51036743_{data[i]["id"]}'
             date = data[i]['date'] 
 
@@ -199,6 +219,7 @@ async def send_new_posts_on_start(message: types.Message):
         await asyncio.sleep(6)  # добавление задержки перед следующим выполнением команды
 
         start_executed = False
+
 
 
 stop_executed = False
